@@ -1,44 +1,38 @@
 # app/routes/student.py
-
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
-from app.database import get_db
 from app import models, schemas
+from app.database import get_db
 
 router = APIRouter(prefix="/students", tags=["students"])
-
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# 注册
-@router.post("/register", response_model=schemas.StudentOut)
-def register_student(student: schemas.StudentCreate, db: Session = Depends(get_db)):
-    # 检查邮箱是否存在
-    existing = db.query(models.Student).filter(models.Student.email == student.email).first()
-    if existing:
+@router.post("/register", response_model=schemas.UserOut)
+def register_student(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    existing_user = db.query(models.User).filter(models.User.email == user.email).first()
+    if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
 
-    # 哈希密码
-    hashed_pw = pwd_context.hash(student.password)
-    
-    # 创建学生对象
-    new_student = models.Student(
-        first_name=student.first_name,
-        last_name=student.last_name,
-        email=student.email,
+    hashed_pw = pwd_context.hash(user.password)
+    new_user = models.User(
+        email=user.email,
         hashed_password=hashed_pw,
-        role=student.role
+        role="student"
     )
-    db.add(new_student)
+    db.add(new_user)
     db.commit()
-    db.refresh(new_student)
-    return new_student
+    db.refresh(new_user)
+    return new_user
 
-# 登录
 @router.post("/login")
-def login_student(student: schemas.StudentLogin, db: Session = Depends(get_db)):
-    db_student = db.query(models.Student).filter(models.Student.email == student.email).first()
-    if not db_student or not pwd_context.verify(student.password, db_student.hashed_password):
-        raise HTTPException(status_code=401, detail="Invalid email or password")
+def login_student(user: schemas.UserLogin, db: Session = Depends(get_db)):
+    existing_user = db.query(models.User).filter(models.User.email == user.email).first()
+    if not existing_user or not pwd_context.verify(user.password, existing_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Invalid credentials")
 
-    return {"message": "Login successful", "student_id": db_student.id}
+    return {
+        "id": existing_user.id,
+        "email": existing_user.email,
+        "role": existing_user.role
+    }

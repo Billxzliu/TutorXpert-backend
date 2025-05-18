@@ -1,25 +1,21 @@
 # app/schemas.py
+from pydantic import BaseModel, EmailStr
+from datetime import datetime
 
-from pydantic import BaseModel, EmailStr, Field
-from typing import Optional
-
-class StudentCreate(BaseModel):
-    first_name: str = Field(..., min_length=1)
-    last_name: str = Field(..., min_length=1)
-    email: EmailStr
-    password: str = Field(..., min_length=8)
-    role: str = "Student"  # 固定为 Student，也可在后端强制判断
-
-class StudentLogin(BaseModel):
+class UserCreate(BaseModel):
     email: EmailStr
     password: str
+    role: str = "student"
 
-class StudentOut(BaseModel):
+class UserOut(BaseModel):
     id: int
-    first_name: str
-    last_name: str
     email: EmailStr
     role: str
+    created_at: datetime
 
     class Config:
         orm_mode = True
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
